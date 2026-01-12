@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>INVENTORY</h1>
+            <div class="tabs">
+                <button class="tab active" data-tab="products">PRODUCTS</button>
+                <button class="tab" data-tab="orders">ORDERS</button>
+                <button class="tab" data-tab="expiry">EXPIRY</button>
+            </div>
+        </header>
+
+        <!-- Products Tab -->
+        <section id="products-tab" class="content active">
+            <div class="toolbar">
+                <button class="btn primary" id="add-product-btn">+ NEW PRODUCT</button>
+                <button class="btn" id="refresh-products">↻ REFRESH</button>
+            </div>
+
+            <div id="add-product-form" class="form-container hidden">
+                <div class="form-header">
+                    <h2>NEW PRODUCT</h2>
+                    <button class="close-btn" id="cancel-product">✕</button>
+                </div>
+                <form id="product-form">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>NAME</label>
+                            <input type="text" id="product-name" required>
+                        </div>
+                        <div class="field">
+                            <label>PRICE</label>
+                            <input type="number" id="product-price" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="field">
+                            <label>QUANTITY</label>
+                            <input type="number" id="product-quantity" required>
+                        </div>
+                        <div class="field">
+                            <label>BATCH</label>
+                            <input type="text" id="product-batch" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="field full">
+                            <label>EXPIRY DATE</label>
+                            <input type="date" id="product-expiry" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary full">SAVE PRODUCT</button>
+                </form>
+            </div>
+
+            <div id="products-list" class="grid"></div>
+        </section>
+
+        <!-- Orders Tab -->
+        <section id="orders-tab" class="content">
+            <div class="toolbar">
+                <button class="btn primary" id="create-order-btn">+ NEW ORDER</button>
+                <button class="btn" id="refresh-orders">↻ REFRESH</button>
+            </div>
+
+            <div id="create-order-form" class="form-container hidden">
+                <div class="form-header">
+                    <h2>NEW ORDER</h2>
+                    <button class="close-btn" id="cancel-order">✕</button>
+                </div>
+                <form id="order-form">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>BATCH NUMBER</label>
+                            <input type="text" id="order-batch" required>
+                        </div>
+                        <div class="field">
+                            <label>QUANTITY</label>
+                            <input type="number" id="order-quantity" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary full">CREATE ORDER</button>
+                </form>
+            </div>
+
+            <!-- Draft Orders Section -->
+            <div id="draft-orders-section">
+                <h3 class="section-title">DRAFT ORDERS</h3>
+                <div id="draft-orders-list" class="list"></div>
+            </div>
+
+            <!-- All Orders Section -->
+            <div id="all-orders-section">
+                <h3 class="section-title">ALL ORDERS</h3>
+                <div id="orders-list" class="list"></div>
+            </div>
+        </section>
+
+        <!-- Expiry Tab -->
+        <section id="expiry-tab" class="content">
+            <div class="toolbar">
+                <button class="btn" id="refresh-expiry">↻ REFRESH</button>
+            </div>
+            <div id="expiry-list" class="list"></div>
+        </section>
+
+        <!-- Receive Stock Modal -->
+        <div id="receive-modal" class="modal hidden">
+            <div class="modal-box">
+                <div class="form-header">
+                    <h2>RECEIVE STOCK</h2>
+                    <button class="close-btn" id="cancel-receive">✕</button>
+                </div>
+                <form id="receive-form">
+                    <input type="hidden" id="receive-batch">
+                    <div class="field">
+                        <label>PRODUCT</label>
+                        <input type="text" id="receive-product-name" disabled>
+                    </div>
+                    <div class="field">
+                        <label>QUANTITY TO RECEIVE</label>
+                        <input type="number" id="receive-quantity" required>
+                    </div>
+                    <button type="submit" class="btn primary full">CONFIRM RECEIPT</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Order Modal -->
+        <div id="edit-order-modal" class="modal hidden">
+            <div class="modal-box">
+                <div class="form-header">
+                    <h2>EDIT ORDER</h2>
+                    <button class="close-btn" id="cancel-edit-order">✕</button>
+                </div>
+                <form id="edit-order-form">
+                    <input type="hidden" id="edit-order-id">
+                    <div class="field">
+                        <label>PRODUCT</label>
+                        <input type="text" id="edit-order-product" disabled>
+                    </div>
+                    <div class="field">
+                        <label>BATCH</label>
+                        <input type="text" id="edit-order-batch" disabled>
+                    </div>
+                    <div class="field">
+                        <label>REQUESTED QUANTITY</label>
+                        <input type="number" id="edit-order-quantity" required>
+                    </div>
+                    <button type="submit" class="btn primary full">UPDATE ORDER</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
