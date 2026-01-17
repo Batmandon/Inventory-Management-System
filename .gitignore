@@ -1,10 +1,41 @@
-﻿__pycache__/
-*.pyc
-*.pyo
-*.pyd
+﻿# Environment variables
+.env
+*.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
 venv/
 env/
-*.db
-*.sqlite
-*.sqlite3
-.env
+ENV/
+*.egg-info/
+*.egg
+build/
+dist/
+
+# PostgreSQL local files
+*.sql
+*.dump
+*.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
