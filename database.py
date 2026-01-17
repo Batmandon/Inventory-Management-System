@@ -17,6 +17,36 @@ def get_db_connection():
     """Get database connection."""
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def init_db():
+    """Initialize database tables."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Create products table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            name TEXT NOT NULL,
+            price REAL NOT NULL,
+            quantity INTEGER NOT NULL,
+            batch TEXT PRIMARY KEY,
+            expiry_date TEXT NOT NULL
+        )
+    ''')
+    
+    # Create orders table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            order_id TEXT PRIMARY KEY,
+            batch TEXT NOT NULL,
+            product TEXT NOT NULL,
+            requested_qty INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
 # ========== PRODUCT OPERATIONS ==========
 
 def get_all_products():
