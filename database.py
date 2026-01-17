@@ -3,50 +3,19 @@ Database module for inventory management system.
 Handles all SQLite database operations.
 """
 
-import sqlite3
-from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
 
-DB_FILE = 'inventory.db'
+load_dotenv()
 
-def init_db():
-    """Initialize SQLite database with required tables."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    
-    # Create products table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            price REAL NOT NULL,
-            quantity INTEGER NOT NULL,
-            batch TEXT UNIQUE NOT NULL,
-            expiry_date TEXT NOT NULL
-        )
-    ''')
-    
-    # Create orders table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id TEXT UNIQUE NOT NULL,
-            batch TEXT NOT NULL,
-            product TEXT NOT NULL,
-            requested_qty INTEGER NOT NULL,
-            status TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    """Get database connection with row factory."""
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Get database connection."""
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 # ========== PRODUCT OPERATIONS ==========
 
@@ -54,39 +23,21 @@ def get_all_products():
     """Load all products from database."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT name, price, quantity, batch, expiry_date FROM products')
-    rows = cursor.fetchall()
+    cursor.execute('SELECT name, price, quanity, batch, expiry_date FROM products')
+    products = cursor.fetchall()
     conn.close()
-    
-    products = []
-    for row in rows:
-        products.append({
-            'name': row['name'],
-            'price': float(row['price']),
-            'quantity': int(row['quantity']),
-            'batch': row['batch'],
-            'expiry_date': row['expiry_date']
-        })
     return products
 
 def get_product_by_batch(batch):
     """Get a single product by batch number."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM products WHERE batch = ?', (batch,))
-    row = cursor.fetchone()
+    cursor.execute('SELECT * FROM products WHERE batch = %s', (batch,))
+    product = cursor.fetchone()
     conn.close()
-    
-    if not row:
-        return None
-    
-    return {
-        'name': row['name'],
-        'price': float(row['price']),
-        'quantity': int(row['quantity']),
-        'batch': row['batch'],
-        'expiry_date': row['expiry_date']
-    }
+    return product
+
+
 
 def insert_product(name, price, quantity, batch, expiry_date):
     """Insert a new product into the database."""
@@ -96,30 +47,35 @@ def insert_product(name, price, quantity, batch, expiry_date):
     try:
         cursor.execute('''
             INSERT INTO products (name, price, quantity, batch, expiry_date)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', (name, price, quantity, batch, expiry_date))
         conn.commit()
         conn.close()
         return True
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        conn.rollback()
         conn.close()
-        raise HTTPException(status_code=400, detail="Batch number already exists. Please enter a unique batch number.")
+        raise HTTPException(
+            status_code=400,
+            detail="Batch number already exists"
+        )
 
 def update_product_quantity(batch, new_quantity):
     """Update product quantity."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE products SET quantity = ? WHERE batch = ?', (new_quantity, batch))
+    cursor.execute('UPDATE products SET quantity = %s WHERE batch = %s', (new_quantity, batch))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
     return rows_affected > 0
 
+
 def delete_product(batch):
     """Delete a product by batch number."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM products WHERE batch = ?', (batch,))
+    cursor.execute('DELETE FROM products WHERE batch = %s', (batch,))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
@@ -204,12 +160,13 @@ def insert_order(order_id, batch, product, requested_qty, status, created_at):
     try:
         cursor.execute('''
             INSERT INTO orders (order_id, batch, product, requested_qty, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         ''', (order_id, batch, product, requested_qty, status, created_at))
         conn.commit()
         conn.close()
         return True
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        conn.rollback()
         conn.close()
         raise HTTPException(status_code=400, detail="Order ID already exists.")
 
