@@ -53,7 +53,7 @@ def get_all_products():
     """Load all products from database."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT name, price, quanity, batch, expiry_date FROM products')
+    cursor.execute('SELECT name, price, quantity, batch, expiry_date FROM products')
     products = cursor.fetchall()
     conn.close()
     return products
@@ -137,7 +137,7 @@ def get_draft_orders():
     """Get all draft orders."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders WHERE status = ?', ("DRAFT",))
+    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders WHERE status = %s', ("DRAFT",))
     rows = cursor.fetchall()
     conn.close()
     
@@ -157,7 +157,7 @@ def get_order_by_id(order_id):
     """Get an order by ID."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM orders WHERE order_id = ?', (order_id,))
+    cursor.execute('SELECT * FROM orders WHERE order_id = %s', (order_id,))
     row = cursor.fetchone()
     conn.close()
     
@@ -177,7 +177,7 @@ def check_draft_order_exists(batch):
     """Check if a draft order exists for a batch."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) as count FROM orders WHERE batch = ? AND status = ?', (batch, "DRAFT"))
+    cursor.execute('SELECT COUNT(*) as count FROM orders WHERE batch = %s AND status = %s', (batch, "DRAFT"))
     count = cursor.fetchone()['count']
     conn.close()
     return count > 0
@@ -204,7 +204,7 @@ def update_order_quantity(order_id, quantity):
     """Update order quantity."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE orders SET requested_qty = ? WHERE order_id = ?', (quantity, order_id))
+    cursor.execute('UPDATE orders SET requested_qty = %s WHERE order_id = %s', (quantity, order_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
@@ -214,7 +214,7 @@ def update_order_status(order_id, status):
     """Update order status."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE orders SET status = ? WHERE order_id = ?', (status, order_id))
+    cursor.execute('UPDATE orders SET status = %s WHERE order_id = %s', (status, order_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
