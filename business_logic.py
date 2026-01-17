@@ -35,7 +35,11 @@ def check_expiry():
     result = []
     
     for product in products:
-        days_left = (datetime.strptime(product['expiry_date'], '%Y-%m-%d').date() - datetime.now().date()).days
+        expiry_date = product['expiry_date']
+        if isinstance(expiry_date, str):
+            expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+
+        days_left = (expiry_date - datetime.now().date()).days
 
         if days_left <= 0:
             status = "Expired" 
