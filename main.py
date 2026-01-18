@@ -1,19 +1,21 @@
 """
 Main FastAPI application for Inventory Management System.
 """
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi import Header
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-import auth
+
 import database as db
 import business_logic as bl
+import auth
 
 # Initialize FastAPI app
 app = FastAPI(title="Inventory Management System", version="1.0.0")
+
+security = HTTPBearer()
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -67,18 +69,18 @@ async def signin(user: UserSignIn):
     return result
 
 @app.get("/auth/user")
-async def get_current_user(authorization: str = Header(None)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get current logged-in user"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    token = authorization.replace("Bearer ", "")
+    token = credentials.credentials
+    print(f"DEBUG: Token recieved: {token[:30]}")
+
     result = await auth.get_user(token)
+    
+    print(f"DEBUG: Result: {result}")
 
     if "error" in result:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail=str(result))
     return result
-
 # ========== PRODUCT ENDPOINTS ==========
 
 @app.post("/products")
