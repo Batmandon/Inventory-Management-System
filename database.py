@@ -21,15 +21,19 @@ def init_db():
     """Initialize database tables."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # Create products table
+    # Droping existing tables (This will delete all data!)
+    cursor.execute('DROP TABLE IF EXISTS orders')
+    cursor.execute('DROP TABLE IF EXISTS products')
+
+    # Create products table with user_id 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
             name TEXT NOT NULL,
             price REAL NOT NULL,
             quantity INTEGER NOT NULL,
             batch TEXT PRIMARY KEY,
-            expiry_date TEXT NOT NULL
+            expiry_date TEXT NOT NULL,
+            user_id TEXT NOT NULL  
         )
     ''')
     
@@ -41,7 +45,8 @@ def init_db():
             product TEXT NOT NULL,
             requested_qty INTEGER NOT NULL,
             status TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            user_id TEXT NOT NULL
         )
     ''')
     
@@ -49,36 +54,36 @@ def init_db():
     conn.close()
 # ========== PRODUCT OPERATIONS ==========
 
-def get_all_products():
-    """Load all products from database."""
+def get_all_products(user_id):
+    """Load all products from database for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT name, price, quantity, batch, expiry_date FROM products')
+    cursor.execute('SELECT name, price, quantity, batch, expiry_date FROM products WHERE user_id = %s', (user_id,))
     products = cursor.fetchall()
     conn.close()
     return products
 
-def get_product_by_batch(batch):
-    """Get a single product by batch number."""
+def get_product_by_batch(batch, user_id):
+    """Get a single product by batch number for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM products WHERE batch = %s', (batch,))
+    cursor.execute('SELECT * FROM products WHERE batch = %s AND user_id = %s', (batch, user_id,))
     product = cursor.fetchone()
     conn.close()
     return product
 
 
 
-def insert_product(name, price, quantity, batch, expiry_date):
+def insert_product(name, price, quantity, batch, expiry_date, user_id):
     """Insert a new product into the database."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
         cursor.execute('''
-            INSERT INTO products (name, price, quantity, batch, expiry_date)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (name, price, quantity, batch, expiry_date))
+            INSERT INTO products (name, price, quantity, batch, expiry_date, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (name, price, quantity, batch, expiry_date, user_id))
         conn.commit()
         conn.close()
         return True
@@ -90,22 +95,22 @@ def insert_product(name, price, quantity, batch, expiry_date):
             detail="Batch number already exists"
         )
 
-def update_product_quantity(batch, new_quantity):
+def update_product_quantity(batch, new_quantity, user_id):
     """Update product quantity."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE products SET quantity = %s WHERE batch = %s', (new_quantity, batch))
+    cursor.execute('UPDATE products SET quantity = %s WHERE batch = %s AND user_id = %s', (new_quantity, batch, user_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
     return rows_affected > 0
 
 
-def delete_product(batch):
-    """Delete a product by batch number."""
+def delete_product(batch, user_id):
+    """Delete a product by batch number for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM products WHERE batch = %s', (batch,))
+    cursor.execute('DELETE FROM products WHERE batch = %s AND user_id = %s', (batch,user_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
@@ -113,11 +118,11 @@ def delete_product(batch):
 
 # ========== ORDER OPERATIONS ==========
 
-def get_all_orders():
-    """Load all orders from database."""
+def get_all_orders(user_id):
+    """Load all orders from database for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders')
+    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders WHERE user_id = %s', (user_id,))
     rows = cursor.fetchall()
     conn.close()
     
@@ -133,11 +138,11 @@ def get_all_orders():
         })
     return orders
 
-def get_draft_orders():
-    """Get all draft orders."""
+def get_draft_orders(user_id):
+    """Get all draft orders for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders WHERE status = %s', ("DRAFT",))
+    cursor.execute('SELECT order_id, batch, product, requested_qty, status, created_at FROM orders WHERE status = %s AND user_id = %s', ("DRAFT",user_id))
     rows = cursor.fetchall()
     conn.close()
     
@@ -153,11 +158,11 @@ def get_draft_orders():
         })
     return orders
 
-def get_order_by_id(order_id):
-    """Get an order by ID."""
+def get_order_by_id(order_id, user_id):
+    """Get an order by ID for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM orders WHERE order_id = %s', (order_id,))
+    cursor.execute('SELECT * FROM orders WHERE order_id = %s And user_id = %s', (order_id,user_id))
     row = cursor.fetchone()
     conn.close()
     
@@ -173,25 +178,25 @@ def get_order_by_id(order_id):
         'created_at': row['created_at']
     }
 
-def check_draft_order_exists(batch):
-    """Check if a draft order exists for a batch."""
+def check_draft_order_exists(batch, user_id):
+    """Check if a draft order exists for a batch for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) as count FROM orders WHERE batch = %s AND status = %s', (batch, "DRAFT"))
+    cursor.execute('SELECT COUNT(*) as count FROM orders WHERE batch = %s AND status = %s AND user_id = %s', (batch, "DRAFT", user_id))
     count = cursor.fetchone()['count']
     conn.close()
     return count > 0
 
-def insert_order(order_id, batch, product, requested_qty, status, created_at):
+def insert_order(order_id, batch, product, requested_qty, status, created_at, user_id):
     """Insert a new order."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
         cursor.execute('''
-            INSERT INTO orders (order_id, batch, product, requested_qty, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (order_id, batch, product, requested_qty, status, created_at))
+            INSERT INTO orders (order_id, batch, product, requested_qty, status, created_at, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (order_id, batch, product, requested_qty, status, created_at, user_id))
         conn.commit()
         conn.close()
         return True
@@ -200,31 +205,31 @@ def insert_order(order_id, batch, product, requested_qty, status, created_at):
         conn.close()
         raise HTTPException(status_code=400, detail="Order ID already exists.")
 
-def update_order_quantity(order_id, quantity):
-    """Update order quantity."""
+def update_order_quantity(order_id, quantity, user_id):
+    """Update order quantity fr a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE orders SET requested_qty = %s WHERE order_id = %s', (quantity, order_id))
+    cursor.execute('UPDATE orders SET requested_qty = %s WHERE order_id = %s AND user_id = %s', (quantity, order_id, user_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
     return rows_affected > 0
 
-def update_order_status(order_id, status):
-    """Update order status."""
+def update_order_status(order_id, status, user_id):
+    """Update order status for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE orders SET status = %s WHERE order_id = %s', (status, order_id))
+    cursor.execute('UPDATE orders SET status = %s WHERE order_id = %s AND user_id = %s', (status, order_id, user_id))
     rows_affected = cursor.rowcount
     conn.commit()
     conn.close()
     return rows_affected > 0
 
-def get_order_count():
-    """Get total number of orders."""
+def get_order_count(user_id):
+    """Get total number of orders for a specific user."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) as count FROM orders')
+    cursor.execute('SELECT COUNT(*) as count FROM orders WHERE user_id = %s', (user_id,))
     count = cursor.fetchone()['count']
     conn.close()
     return count

@@ -29,7 +29,27 @@ class Product(BaseModel):
     batch: str
     expiry_date: str
 
+class UserSignUp(BaseModel):
+    email: str
+    password:str
+
+class UserSignIn(BaseModel):
+    email: str
+    password:str
+
+# ========= AUTHENTICATION DEPENDENCY ==========
+async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Dependency to get current user ID from token"""
+    token = credentials.credentials
+    user_id = auth.verify_token(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    return user_id
+
 # Initialize database on startup
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database when application starts."""
@@ -44,13 +64,6 @@ def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 # ========== AUTH ENDPOINTS ==========
-class UserSignUp(BaseModel):
-    email: str
-    password:str
-
-class UserSignIn(BaseModel):
-    email: str
-    password:str
 
 @app.post("/auth/signup")
 async def signup(user: UserSignUp):
@@ -84,64 +97,65 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # ========== PRODUCT ENDPOINTS ==========
 
 @app.post("/products")
-def create_product(product: Product):
+def create_product(product: Product, user_id: str = Depends(get_current_user_id)):
     """Create a new product."""
     return bl.add_product(
         product.name,
         product.price,
         product.quantity,
         product.batch,
-        product.expiry_date
+        product.expiry_date,
+        user_id
     )
 
 @app.get("/products")
-def get_products():
+def get_products(user_id: str = Depends(get_current_user_id)):
     """Get all products."""
-    return bl.view_products()
+    return bl.view_products(user_id)
 
 @app.get("/products/expiry")
-def get_expiry_status():
+def get_expiry_status(user_id: str = Depends(get_current_user_id)):
     """Get expiry status of all products."""
-    return bl.check_expiry()
+    return bl.check_expiry(user_id)
 
 @app.delete("/products/{batch}")
-def delete_product(batch: str):
+def delete_product(batch: str, user_id: str = Depends(get_current_user_id)):
     """Delete a product by batch number."""
-    return bl.remove_product(batch)
+    return bl.remove_product(batch, user_id)
 
 # ========== ORDER ENDPOINTS ==========
 
 @app.post("/orders")
-def create_order(batch: str, quantity: int):
+def create_order(batch: str, quantity: int, user_id: str = Depends(get_current_user_id)):
     """Create or update an order."""
-    return bl.create_order(batch, quantity)
+    return bl.create_order(batch, quantity, user_id)
 
 @app.get("/orders")
-def get_orders():
+def get_orders(user_id: str = Depends(get_current_user_id)):
     """Get all orders."""
-    return bl.view_orders()
+    return bl.view_orders(user_id)
 
 @app.get("/orders/drafts")
-def get_draft_orders():
+def get_draft_orders(user_id: str = Depends(get_current_user_id)):
     """Get all draft orders."""
-    return bl.view_draft_orders()
+    return bl.view_draft_orders(user_id)
 
 @app.put("/orders/{order_id}")
-def update_order(order_id: str, quantity: int):
+def update_order(order_id: str, quantity: int, user_id: str = Depends(get_current_user_id)):
     """Update order quantity."""
-    return bl.update_order(order_id, quantity)
+    return bl.update_order(order_id, quantity, user_id)
 
 @app.post("/orders/{order_id}/confirm")
-def confirm_order(order_id: str):
+def confirm_order(order_id: str, user_id: str = Depends(get_current_user_id)):
     """Confirm a draft order."""
-    return bl.confirm_order(order_id)
+    return bl.confirm_order(order_id, user_id)
 
 # ========== SUPPLIER ENDPOINTS ==========
 
 @app.post("/supplier/recieve")
-def receive_stock(batch: str, received_quantity: int):
+def receive_stock(batch: str, received_quantity: int, user_id: str = Depends(get_current_user_id)):
     """Receive stock from supplier."""
-    return bl.receive_stock(batch, received_quantity)
+    return bl.receive_stock(batch, received_quantity, user_id)
 
 # ========== HEALTH CHECK ==========
 
