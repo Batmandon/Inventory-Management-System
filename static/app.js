@@ -100,7 +100,17 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
         showToast(result.message || 'Product added successfully');
         document.getElementById('add-product-form').classList.add('hidden');
         document.getElementById('product-form').reset();
-        loadProducts();
+
+        // Refresh all data
+        await loadProducts();
+        await loadDraftOrders();
+        await loadExpiry();
+
+        // If on orders tab , refresh orders too
+        const activeTab = document.querySelector('.tab.active');
+        if (activeTab && activeTab.dataset.tab === 'orders') {
+            await loadOrders();
+        }
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -476,7 +486,12 @@ document.getElementById('receive-form').addEventListener('submit', async (e) => 
         showToast(`Stock updated: ${result.received} received, new stock: ${result.current_stock}`);
         document.getElementById('receive-modal').classList.add('hidden');
         document.getElementById('receive-form').reset();
-        loadProducts();
+
+        // Refresh all data
+        await loadProducts();
+        await loadDraftOrders();
+        await loadExpiry();
+        
         // Refresh draft orders as auto-create might have triggered
         loadDraftOrders();
     } catch (error) {
