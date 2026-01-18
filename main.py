@@ -63,6 +63,16 @@ def home(request: Request):
     """Serve the main HTML page."""
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    """Serve the login page"""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request):
+    """Serve the register page"""
+    return templates.TemplateResponse("register.html", {"request": request})
+
 # ========== AUTH ENDPOINTS ==========
 
 @app.post("/auth/signup")

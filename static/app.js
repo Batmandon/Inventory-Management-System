@@ -1,6 +1,26 @@
 // API Base URL
 const API = '';
 
+// Helper function to get auth headers
+function getAuthHeaders() {
+    const token = localStorage.getItem('access_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
+
+// Helper function to handle auth errors
+function handleAuthError(response) {
+    if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_email');
+        window.location.href = '/login';
+        return true;
+    }
+    return false;
+}
+
 // DOM Elements
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.content');
@@ -65,9 +85,11 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     try {
         const response = await fetch(`${API}/products`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(product)
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();
@@ -87,7 +109,12 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
 // Load products
 async function loadProducts() {
     try {
-        const response = await fetch(`${API}/products`);
+        const response = await fetch(`${API}/products`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        
         const products = await response.json();
         
         const container = document.getElementById('products-list');
@@ -123,8 +150,11 @@ async function deleteProduct(batch) {
     
     try {
         const response = await fetch(`${API}/products/${batch}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: getAuthHeaders()
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();
@@ -162,8 +192,11 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
     
     try {
         const response = await fetch(`${API}/orders?batch=${batch}&quantity=${quantity}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: getAuthHeaders()
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();
@@ -184,7 +217,12 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
 // Load draft orders
 async function loadDraftOrders() {
     try {
-        const response = await fetch(`${API}/orders/drafts`);
+        const response = await fetch(`${API}/orders/drafts`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        
         const drafts = await response.json();
         
         const container = document.getElementById('draft-orders-list');
@@ -217,7 +255,12 @@ async function loadDraftOrders() {
 // Load all orders
 async function loadOrders() {
     try {
-        const response = await fetch(`${API}/orders`);
+        const response = await fetch(`${API}/orders`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        
         const orders = await response.json();
         
         const container = document.getElementById('orders-list');
@@ -266,8 +309,11 @@ async function confirmOrder(orderId) {
     
     try {
         const response = await fetch(`${API}/orders/${orderId}/confirm`, {
-            method: 'POST'
+            method: 'POST',
+            headers: getAuthHeaders()
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();
@@ -322,8 +368,11 @@ document.getElementById('edit-order-form').addEventListener('submit', async (e) 
     
     try {
         const response = await fetch(`${API}/orders/${orderId}?quantity=${quantity}`, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: getAuthHeaders()
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();
@@ -345,7 +394,12 @@ document.getElementById('edit-order-form').addEventListener('submit', async (e) 
 // Load expiry status
 async function loadExpiry() {
     try {
-        const response = await fetch(`${API}/products/expiry`);
+        const response = await fetch(`${API}/products/expiry`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        
         const items = await response.json();
         
         const container = document.getElementById('expiry-list');
@@ -407,8 +461,11 @@ document.getElementById('receive-form').addEventListener('submit', async (e) => 
     
     try {
         const response = await fetch(`${API}/supplier/recieve?batch=${batch}&received_quantity=${quantity}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: getAuthHeaders()
         });
+        
+        if (handleAuthError(response)) return;
         
         if (!response.ok) {
             const error = await response.json();

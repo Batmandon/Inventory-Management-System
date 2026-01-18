@@ -525,3 +525,35 @@ input:disabled {
         flex-direction: column;
     }
 }
+
+/* Add these styles to your existing style.css */
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.logout-btn {
+    background: #f44336 !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+}
+
+.logout-btn:hover {
+    background: #d32f2f !important;
+}
