@@ -2,12 +2,13 @@
 Main FastAPI application for Inventory Management System.
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi import Header
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-
+import auth
 import database as db
 import business_logic as bl
 
@@ -39,6 +40,44 @@ async def startup_event():
 def home(request: Request):
     """Serve the main HTML page."""
     return templates.TemplateResponse("index.html", {"request": request})
+
+# ========== AUTH ENDPOINTS ==========
+class UserSignUp(BaseModel):
+    email: str
+    password:str
+
+class UserSignIn(BaseModel):
+    email: str
+    password:str
+
+@app.post("/auth/signup")
+async def signup(user: UserSignUp):
+    """Register a new user"""
+    result = await auth.sign_up(user.email, user.password)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@app.post("/auth/signin")
+async def signin(user: UserSignIn):
+    """Login a user"""
+    result = await auth.sign_in(user.email, user.password)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@app.get("/auth/user")
+async def get_current_user(authorization: str = Header(None)):
+    """Get current logged-in user"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = authorization.replace("Bearer ", "")
+    result = await auth.get_user(token)
+
+    if "error" in result:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return result
 
 # ========== PRODUCT ENDPOINTS ==========
 
