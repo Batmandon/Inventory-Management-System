@@ -37,7 +37,7 @@ async def sign_in(email: str, password: str):
 async def get_user(access_token: str):
     """Get current user from token"""
     async with httpx.AsyncClient() as client:
-        response = await client.post(
+        response = await client.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={
                 "apikey":SUPABASE_ANON_KEY,
