@@ -37,10 +37,14 @@ const navLinks = document.querySelectorAll('.nav-link');
 const pages = document.querySelectorAll('.page');
 const pageTitle = document.getElementById('page-title');
 
+console.log('Navigation initialized:', navLinks.length, 'links found');
+
 navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
         const pageName = link.dataset.page;
+        
+        console.log('Clicked:', pageName);
         
         // Update active nav
         navLinks.forEach(l => l.classList.remove('active'));
@@ -594,4 +598,22 @@ async function loadExpiry() {
 document.getElementById('refresh-expiry').addEventListener('click', loadExpiry);
 
 // ========== INITIALIZE ==========
-// Don't load anything automatically - only load when user clicks
+// Load initial data based on active page
+window.addEventListener('DOMContentLoaded', () => {
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+        const pageId = activePage.id;
+        
+        // Load data for currently active page
+        if (pageId === 'dashboard-page') {
+            loadDashboard();
+        } else if (pageId === 'products-page') {
+            loadProducts();
+        } else if (pageId === 'orders-page') {
+            loadDraftOrders();
+            loadOrders();
+        } else if (pageId === 'expiry-page') {
+            loadExpiry();
+        }
+    }
+});
