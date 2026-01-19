@@ -3,190 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Manager</title>
+    <title>Inventory Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>INVENTORY</h1>
-            <div class="header-right">
-                <span id="user-email" class="user-info"></span>
-                <button class="btn logout-btn" id="logout-btn">🚪 LOGOUT</button>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">▣</div>
+            <div class="logo-text">INVENTORY</div>
+        </div>
+        
+        <nav class="nav">
+            <a href="#" class="nav-link active" data-page="dashboard">
+                <span class="icon">■</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-link" data-page="products">
+                <span class="icon">▤</span>
+                <span>Products</span>
+            </a>
+            <a href="#" class="nav-link" data-page="orders">
+                <span class="icon">≡</span>
+                <span>Orders</span>
+            </a>
+            <a href="#" class="nav-link" data-page="expiry">
+                <span class="icon">◷</span>
+                <span>Expiry</span>
+            </a>
+        </nav>
+        
+        <div class="user-section">
+            <div class="user-info">
+                <div class="user-avatar">◉</div>
+                <div>
+                    <div class="user-name" id="user-name">User</div>
+                    <div class="user-email" id="user-email-sidebar">user@email.com</div>
+                </div>
             </div>
-            <div class="tabs">
-                <button class="tab active" data-tab="products">PRODUCTS</button>
-                <button class="tab" data-tab="orders">ORDERS</button>
-                <button class="tab" data-tab="expiry">EXPIRY</button>
+            <button class="logout-btn" id="logout-btn">
+                <span>→</span> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Header -->
+        <header class="header">
+            <h1 id="page-title">Dashboard</h1>
+            <div class="header-right">
+                <span id="user-email-header">user@email.com</span>
             </div>
         </header>
 
-        <!-- Products Tab -->
-        <section id="products-tab" class="content active">
-            <div class="toolbar">
-                <button class="btn primary" id="add-product-btn">+ NEW PRODUCT</button>
-                <button class="btn" id="refresh-products">↻ REFRESH</button>
-            </div>
-
-            <div id="add-product-form" class="form-container hidden">
-                <div class="form-header">
-                    <h2>NEW PRODUCT</h2>
-                    <button class="close-btn" id="cancel-product">✕</button>
+        <!-- Dashboard Page -->
+        <section id="dashboard-page" class="page active">
+            <!-- Stats Cards -->
+            <div class="stats">
+                <div class="stat-card blue">
+                    <div class="stat-info">
+                        <h3 id="stat-products">0</h3>
+                        <p>Total Products</p>
+                    </div>
+                    <div class="stat-icon">▤</div>
                 </div>
-                <form id="product-form">
-                    <div class="form-row">
-                        <div class="field">
-                            <label>NAME</label>
-                            <input type="text" id="product-name" required>
-                        </div>
-                        <div class="field">
-                            <label>PRICE</label>
-                            <input type="number" id="product-price" step="0.01" required>
-                        </div>
+                <div class="stat-card green">
+                    <div class="stat-info">
+                        <h3 id="stat-orders">0</h3>
+                        <p>Total Orders</p>
                     </div>
-                    <div class="form-row">
-                        <div class="field">
-                            <label>QUANTITY</label>
-                            <input type="number" id="product-quantity" required>
-                        </div>
-                        <div class="field">
-                            <label>BATCH</label>
-                            <input type="text" id="product-batch" required>
-                        </div>
+                    <div class="stat-icon">≡</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-info">
+                        <h3 id="stat-expiry">0</h3>
+                        <p>Expiring Soon</p>
                     </div>
-                    <div class="form-row">
-                        <div class="field full">
-                            <label>EXPIRY DATE</label>
-                            <input type="date" id="product-expiry" required>
-                        </div>
+                    <div class="stat-icon">⚠</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-info">
+                        <h3 id="stat-low">0</h3>
+                        <p>Low Stock</p>
                     </div>
-                    <button type="submit" class="btn primary full">SAVE PRODUCT</button>
-                </form>
+                    <div class="stat-icon">↓</div>
+                </div>
             </div>
 
+            <!-- Recent Products -->
+            <div class="card">
+                <h2>Recent Products</h2>
+                <div id="recent-products"></div>
+            </div>
+
+            <!-- Draft Orders -->
+            <div class="card">
+                <h2>Draft Orders</h2>
+                <div id="dashboard-drafts"></div>
+            </div>
+        </section>
+
+        <!-- Products Page -->
+        <section id="products-page" class="page">
+            <div class="page-header">
+                <h2>Products</h2>
+                <div>
+                    <button class="btn btn-primary" id="add-product-btn">+ Add Product</button>
+                    <button class="btn" id="refresh-products">↻ Refresh</button>
+                </div>
+            </div>
             <div id="products-list" class="grid"></div>
         </section>
 
-        <!-- Orders Tab -->
-        <section id="orders-tab" class="content">
-            <div class="toolbar">
-                <button class="btn primary" id="create-order-btn">+ NEW ORDER</button>
-                <button class="btn" id="refresh-orders">↻ REFRESH</button>
-            </div>
-
-            <div id="create-order-form" class="form-container hidden">
-                <div class="form-header">
-                    <h2>NEW ORDER</h2>
-                    <button class="close-btn" id="cancel-order">✕</button>
+        <!-- Orders Page -->
+        <section id="orders-page" class="page">
+            <div class="page-header">
+                <h2>Orders</h2>
+                <div>
+                    <button class="btn btn-primary" id="create-order-btn">+ Create Order</button>
+                    <button class="btn" id="refresh-orders">↻ Refresh</button>
                 </div>
-                <form id="order-form">
-                    <div class="form-row">
-                        <div class="field">
-                            <label>BATCH NUMBER</label>
-                            <input type="text" id="order-batch" required>
-                        </div>
-                        <div class="field">
-                            <label>QUANTITY</label>
-                            <input type="number" id="order-quantity" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn primary full">CREATE ORDER</button>
-                </form>
             </div>
-
-            <!-- Draft Orders Section -->
-            <div id="draft-orders-section">
-                <h3 class="section-title">DRAFT ORDERS</h3>
-                <div id="draft-orders-list" class="list"></div>
+            
+            <div class="card">
+                <h3>Draft Orders</h3>
+                <div id="draft-orders-list"></div>
             </div>
-
-            <!-- All Orders Section -->
-            <div id="all-orders-section">
-                <h3 class="section-title">ALL ORDERS</h3>
-                <div id="orders-list" class="list"></div>
+            
+            <div class="card">
+                <h3>All Orders</h3>
+                <div id="orders-list"></div>
             </div>
         </section>
 
-        <!-- Expiry Tab -->
-        <section id="expiry-tab" class="content">
-            <div class="toolbar">
-                <button class="btn" id="refresh-expiry">↻ REFRESH</button>
+        <!-- Expiry Page -->
+        <section id="expiry-page" class="page">
+            <div class="page-header">
+                <h2>Expiry Status</h2>
+                <button class="btn" id="refresh-expiry">↻ Refresh</button>
             </div>
-            <div id="expiry-list" class="list"></div>
+            <div id="expiry-list"></div>
         </section>
+    </main>
 
-        <!-- Receive Stock Modal -->
-        <div id="receive-modal" class="modal hidden">
-            <div class="modal-box">
-                <div class="form-header">
-                    <h2>RECEIVE STOCK</h2>
-                    <button class="close-btn" id="cancel-receive">✕</button>
-                </div>
-                <form id="receive-form">
-                    <input type="hidden" id="receive-batch">
-                    <div class="field">
-                        <label>PRODUCT</label>
-                        <input type="text" id="receive-product-name" disabled>
-                    </div>
-                    <div class="field">
-                        <label>QUANTITY TO RECEIVE</label>
-                        <input type="number" id="receive-quantity" required>
-                    </div>
-                    <button type="submit" class="btn primary full">CONFIRM RECEIPT</button>
-                </form>
+    <!-- Add Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Product</h3>
+                <button class="close" id="close-product">&times;</button>
             </div>
-        </div>
-
-        <!-- Edit Order Modal -->
-        <div id="edit-order-modal" class="modal hidden">
-            <div class="modal-box">
-                <div class="form-header">
-                    <h2>EDIT ORDER</h2>
-                    <button class="close-btn" id="cancel-edit-order">✕</button>
+            <form id="product-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="product-name" placeholder="Product name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="number" id="product-price" step="0.01" placeholder="0.00" required>
+                    </div>
                 </div>
-                <form id="edit-order-form">
-                    <input type="hidden" id="edit-order-id">
-                    <div class="field">
-                        <label>PRODUCT</label>
-                        <input type="text" id="edit-order-product" disabled>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="product-quantity" placeholder="0" required>
                     </div>
-                    <div class="field">
-                        <label>BATCH</label>
-                        <input type="text" id="edit-order-batch" disabled>
+                    <div class="form-group">
+                        <label>Batch</label>
+                        <input type="text" id="product-batch" placeholder="Batch number" required>
                     </div>
-                    <div class="field">
-                        <label>REQUESTED QUANTITY</label>
-                        <input type="number" id="edit-order-quantity" required>
-                    </div>
-                    <button type="submit" class="btn primary full">UPDATE ORDER</button>
-                </form>
-            </div>
+                </div>
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="date" id="product-expiry" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" id="cancel-product">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
         </div>
-
-        <!-- Toast Notification -->
-        <div id="toast" class="toast hidden"></div>
     </div>
 
+    <!-- Create Order Modal -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Order</h3>
+                <button class="close" id="close-order">&times;</button>
+            </div>
+            <form id="order-form">
+                <div class="form-group">
+                    <label>Batch Number</label>
+                    <input type="text" id="order-batch" placeholder="Enter batch" required>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="order-quantity" placeholder="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" id="cancel-order">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receive Stock Modal -->
+    <div id="receive-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Receive Stock</h3>
+                <button class="close" id="close-receive">&times;</button>
+            </div>
+            <form id="receive-form">
+                <input type="hidden" id="receive-batch">
+                <div class="form-group">
+                    <label>Product</label>
+                    <input type="text" id="receive-product-name" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="receive-quantity" placeholder="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" id="cancel-receive">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Receive</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Order Modal -->
+    <div id="edit-order-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Order</h3>
+                <button class="close" id="close-edit-order">&times;</button>
+            </div>
+            <form id="edit-order-form">
+                <input type="hidden" id="edit-order-id">
+                <div class="form-group">
+                    <label>Product</label>
+                    <input type="text" id="edit-order-product" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Batch</label>
+                    <input type="text" id="edit-order-batch" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="edit-order-quantity" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" id="cancel-edit-order">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
     <script>
-        // Check if user is logged in
+        // Auth check
         const token = localStorage.getItem('access_token');
         const userEmail = localStorage.getItem('user_email');
         
         if (!token) {
-            // Redirect to login if not authenticated
             window.location.href = '/login';
         } else {
-            // Display user email
-            document.getElementById('user-email').textContent = userEmail || 'User';
+            document.getElementById('user-name').textContent = userEmail?.split('@')[0] || 'User';
+            document.getElementById('user-email-sidebar').textContent = userEmail || '';
+            document.getElementById('user-email-header').textContent = userEmail || '';
         }
 
-        // Logout functionality
+        // Logout
         document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user_email');
+            localStorage.clear();
             window.location.href = '/login';
         });
     </script>

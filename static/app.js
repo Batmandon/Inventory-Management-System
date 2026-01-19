@@ -21,57 +21,186 @@ function handleAuthError(response) {
     return false;
 }
 
-// DOM Elements
-const tabs = document.querySelectorAll('.tab');
-const tabContents = document.querySelectorAll('.content');
-
 // Toast notification
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.classList.remove('hidden');
+    toast.className = `toast show ${type}`;
     
     setTimeout(() => {
-        toast.classList.add('hidden');
+        toast.classList.remove('show');
     }, 3000);
 }
 
-// Tab switching
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const targetTab = tab.dataset.tab;
+// ========== NAVIGATION ==========
+const navLinks = document.querySelectorAll('.nav-link');
+const pages = document.querySelectorAll('.page');
+const pageTitle = document.getElementById('page-title');
+
+navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const pageName = link.dataset.page;
         
-        tabs.forEach(t => t.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
+        // Update active nav
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
         
-        tab.classList.add('active');
-        document.getElementById(`${targetTab}-tab`).classList.add('active');
+        // Show page
+        pages.forEach(p => p.classList.remove('active'));
+        document.getElementById(`${pageName}-page`).classList.add('active');
         
-        // Load data when switching tabs
-        if (targetTab === 'products') loadProducts();
-        if (targetTab === 'orders') {
-            loadDraftOrders();
-            loadOrders();
-        }
-        if (targetTab === 'expiry') loadExpiry();
+        // Update title
+        const titles = {
+            'dashboard': 'Dashboard',
+            'products': 'Products',
+            'orders': 'Orders',
+            'expiry': 'Expiry Status'
+        };
+        pageTitle.textContent = titles[pageName];
+        
+        // Load data for page
+        if (pageName === 'dashboard') loadDashboard();
+        if (pageName === 'products') loadProducts();
+        if (pageName === 'orders') { loadDraftOrders(); loadOrders(); }
+        if (pageName === 'expiry') loadExpiry();
     });
 });
 
-// ========== PRODUCTS ==========
+// ========== DASHBOARD ==========
+async function loadDashboard() {
+    try {
+        // Load stats
+        await loadStats();
+        
+        // Load recent products
+        const response = await fetch(`${API}/products`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        const products = await response.json();
+        
+        const container = document.getElementById('recent-products');
+        if (products.length === 0) {
+            container.innerHTML = '<p class="empty">No products found</p>';
+        } else {
+            const recent = products.slice(0, 5);
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Batch</th>
+                            <th>Quantity</th>
+                            <th>Expiry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recent.map(p => `
+                            <tr>
+                                <td>${p.name}</td>
+                                <td>${p.batch}</td>
+                                <td>${p.quantity}</td>
+                                <td>${p.expiry_date}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        // Load draft orders for dashboard
+        const draftsResponse = await fetch(`${API}/orders/drafts`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(draftsResponse)) return;
+        const drafts = await draftsResponse.json();
+        
+        const draftsContainer = document.getElementById('dashboard-drafts');
+        if (drafts.length === 0) {
+            draftsContainer.innerHTML = '<p class="empty">No draft orders</p>';
+        } else {
+            draftsContainer.innerHTML = drafts.slice(0, 3).map(order => `
+                <div class="list-item">
+                    <div>
+                        <h4>${order.product}</h4>
+                        <p class="list-meta">Batch: ${order.batch} | Qty: ${order.requested_qty}</p>
+                    </div>
+                    <span class="badge badge-draft">Draft</span>
+                </div>
+            `).join('');
+        }
+        
+    } catch (error) {
+        console.error('Dashboard load error:', error);
+    }
+}
 
-// Show/hide add product form
-document.getElementById('add-product-btn').addEventListener('click', () => {
-    document.getElementById('add-product-form').classList.remove('hidden');
+async function loadStats() {
+    try {
+        // Get products
+        const productsRes = await fetch(`${API}/products`, {
+            headers: getAuthHeaders()
+        });
+        if (handleAuthError(productsRes)) return;
+        const products = await productsRes.json();
+        
+        // Get orders
+        const ordersRes = await fetch(`${API}/orders`, {
+            headers: getAuthHeaders()
+        });
+        if (handleAuthError(ordersRes)) return;
+        const orders = await ordersRes.json();
+        
+        // Get expiry
+        const expiryRes = await fetch(`${API}/products/expiry`, {
+            headers: getAuthHeaders()
+        });
+        if (handleAuthError(expiryRes)) return;
+        const expiry = await expiryRes.json();
+        
+        // Calculate stats
+        document.getElementById('stat-products').textContent = products.length;
+        document.getElementById('stat-orders').textContent = orders.length;
+        
+        const expiringSoon = expiry.filter(e => 
+            e.status === 'Critical' || e.status === 'Warning' || e.status === 'Expired'
+        ).length;
+        document.getElementById('stat-expiry').textContent = expiringSoon;
+        
+        const lowStock = products.filter(p => p.quantity < 10).length;
+        document.getElementById('stat-low').textContent = lowStock;
+        
+    } catch (error) {
+        console.error('Stats load error:', error);
+    }
+}
+
+// ========== PRODUCTS ==========
+const addProductBtn = document.getElementById('add-product-btn');
+const productModal = document.getElementById('product-modal');
+const closeProduct = document.getElementById('close-product');
+const cancelProduct = document.getElementById('cancel-product');
+const productForm = document.getElementById('product-form');
+
+addProductBtn.addEventListener('click', () => {
+    productModal.classList.add('show');
 });
 
-document.getElementById('cancel-product').addEventListener('click', () => {
-    document.getElementById('add-product-form').classList.add('hidden');
-    document.getElementById('product-form').reset();
+closeProduct.addEventListener('click', () => {
+    productModal.classList.remove('show');
+    productForm.reset();
+});
+
+cancelProduct.addEventListener('click', () => {
+    productModal.classList.remove('show');
+    productForm.reset();
 });
 
 // Add product
-document.getElementById('product-form').addEventListener('submit', async (e) => {
+productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const product = {
@@ -97,20 +226,12 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
         }
         
         const result = await response.json();
-        showToast(result.message || 'Product added successfully');
-        document.getElementById('add-product-form').classList.add('hidden');
-        document.getElementById('product-form').reset();
-
-        // Refresh all data
+        showToast(result.message || 'Product added successfully', 'success');
+        productModal.classList.remove('show');
+        productForm.reset();
+        
         await loadProducts();
-        await loadDraftOrders();
-        await loadExpiry();
-
-        // If on orders tab , refresh orders too
-        const activeTab = document.querySelector('.tab.active');
-        if (activeTab && activeTab.dataset.tab === 'orders') {
-            await loadOrders();
-        }
+        await loadStats();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -124,28 +245,27 @@ async function loadProducts() {
         });
         
         if (handleAuthError(response)) return;
-        
         const products = await response.json();
         
         const container = document.getElementById('products-list');
         
         if (products.length === 0) {
-            container.innerHTML = '<div class="empty-state">NO PRODUCTS FOUND</div>';
+            container.innerHTML = '<p class="empty">No products found</p>';
             return;
         }
         
         container.innerHTML = products.map(product => `
-            <div class="card">
+            <div class="product-card">
                 <h3>${product.name}</h3>
-                <div class="card-meta">
-                    <div>PRICE: ₹${product.price.toFixed(2)}</div>
-                    <div>QUANTITY: ${product.quantity}</div>
-                    <div>BATCH: ${product.batch}</div>
-                    <div>EXPIRY: ${product.expiry_date}</div>
+                <div class="product-meta">
+                    <div>Price: ₹${product.price.toFixed(2)}</div>
+                    <div>Quantity: ${product.quantity}</div>
+                    <div>Batch: ${product.batch}</div>
+                    <div>Expiry: ${product.expiry_date}</div>
                 </div>
-                <div class="card-actions">
-                    <button class="btn" onclick="openReceiveModal('${product.batch}', '${product.name}')">RECEIVE</button>
-                    <button class="btn danger" onclick="deleteProduct('${product.batch}')">DELETE</button>
+                <div class="product-actions">
+                    <button class="btn btn-sm" onclick="openReceiveModal('${product.batch}', '${product.name}')">Receive</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteProduct('${product.batch}')">Delete</button>
                 </div>
             </div>
         `).join('');
@@ -171,8 +291,9 @@ async function deleteProduct(batch) {
             throw new Error(error.detail || 'Failed to delete product');
         }
         
-        showToast('Product deleted successfully');
-        loadProducts();
+        showToast('Product deleted successfully', 'success');
+        await loadProducts();
+        await loadStats();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -181,20 +302,83 @@ async function deleteProduct(batch) {
 // Refresh products
 document.getElementById('refresh-products').addEventListener('click', loadProducts);
 
-// ========== ORDERS ==========
+// ========== RECEIVE STOCK ==========
+const receiveModal = document.getElementById('receive-modal');
+const closeReceive = document.getElementById('close-receive');
+const cancelReceive = document.getElementById('cancel-receive');
+const receiveForm = document.getElementById('receive-form');
 
-// Show/hide create order form
-document.getElementById('create-order-btn').addEventListener('click', () => {
-    document.getElementById('create-order-form').classList.remove('hidden');
+function openReceiveModal(batch, name) {
+    document.getElementById('receive-batch').value = batch;
+    document.getElementById('receive-product-name').value = name;
+    document.getElementById('receive-quantity').value = '';
+    receiveModal.classList.add('show');
+}
+
+closeReceive.addEventListener('click', () => {
+    receiveModal.classList.remove('show');
+    receiveForm.reset();
 });
 
-document.getElementById('cancel-order').addEventListener('click', () => {
-    document.getElementById('create-order-form').classList.add('hidden');
-    document.getElementById('order-form').reset();
+cancelReceive.addEventListener('click', () => {
+    receiveModal.classList.remove('show');
+    receiveForm.reset();
+});
+
+receiveForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const batch = document.getElementById('receive-batch').value;
+    const quantity = parseInt(document.getElementById('receive-quantity').value);
+    
+    try {
+        const response = await fetch(`${API}/supplier/recieve?batch=${batch}&received_quantity=${quantity}`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        
+        if (handleAuthError(response)) return;
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to receive stock');
+        }
+        
+        const result = await response.json();
+        showToast(`Stock received: ${result.received} units`, 'success');
+        receiveModal.classList.remove('show');
+        receiveForm.reset();
+        
+        await loadProducts();
+        await loadStats();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+});
+
+// ========== ORDERS ==========
+const createOrderBtn = document.getElementById('create-order-btn');
+const orderModal = document.getElementById('order-modal');
+const closeOrder = document.getElementById('close-order');
+const cancelOrder = document.getElementById('cancel-order');
+const orderForm = document.getElementById('order-form');
+
+createOrderBtn.addEventListener('click', () => {
+    orderModal.classList.add('show');
+});
+
+closeOrder.addEventListener('click', () => {
+    orderModal.classList.remove('show');
+    orderForm.reset();
+});
+
+cancelOrder.addEventListener('click', () => {
+    orderModal.classList.remove('show');
+    orderForm.reset();
 });
 
 // Create order
-document.getElementById('order-form').addEventListener('submit', async (e) => {
+orderForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const batch = document.getElementById('order-batch').value;
@@ -214,11 +398,12 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
         }
         
         const result = await response.json();
-        showToast(result.message || 'Order created successfully');
-        document.getElementById('create-order-form').classList.add('hidden');
-        document.getElementById('order-form').reset();
-        loadDraftOrders();
-        loadOrders();
+        showToast(result.message || 'Order created successfully', 'success');
+        orderModal.classList.remove('show');
+        orderForm.reset();
+        
+        await loadDraftOrders();
+        await loadOrders();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -232,28 +417,24 @@ async function loadDraftOrders() {
         });
         
         if (handleAuthError(response)) return;
-        
         const drafts = await response.json();
         
         const container = document.getElementById('draft-orders-list');
         
         if (drafts.length === 0) {
-            container.innerHTML = '<div class="empty-state">NO DRAFT ORDERS</div>';
+            container.innerHTML = '<p class="empty">No draft orders</p>';
             return;
         }
         
         container.innerHTML = drafts.map(order => `
-            <div class="list-item draft">
-                <div class="list-item-content">
-                    <h3>${order.product}</h3>
-                    <div class="list-item-meta">
-                        ORDER ID: ${order.order_id} | BATCH: ${order.batch} | QTY: ${order.requested_qty} | CREATED: ${order.created_at}
-                    </div>
+            <div class="list-item">
+                <div>
+                    <h4>${order.product}</h4>
+                    <p class="list-meta">Order ID: ${order.order_id} | Batch: ${order.batch} | Qty: ${order.requested_qty}</p>
                 </div>
-                <span class="badge badge-draft">DRAFT</span>
-                <div class="list-item-actions">
-                    <button class="btn info btn-small" onclick="openEditOrderModal('${order.order_id}', '${order.product}', '${order.batch}', ${order.requested_qty})">EDIT</button>
-                    <button class="btn success btn-small" onclick="confirmOrder('${order.order_id}')">CONFIRM</button>
+                <div class="list-actions">
+                    <button class="btn btn-sm" onclick="openEditOrderModal('${order.order_id}', '${order.product}', '${order.batch}', ${order.requested_qty})">Edit</button>
+                    <button class="btn btn-sm btn-success" onclick="confirmOrder('${order.order_id}')">Confirm</button>
                 </div>
             </div>
         `).join('');
@@ -270,44 +451,24 @@ async function loadOrders() {
         });
         
         if (handleAuthError(response)) return;
-        
         const orders = await response.json();
         
         const container = document.getElementById('orders-list');
         
         if (orders.length === 0) {
-            container.innerHTML = '<div class="empty-state">NO ORDERS FOUND</div>';
+            container.innerHTML = '<p class="empty">No orders found</p>';
             return;
         }
         
-        container.innerHTML = orders.map(order => {
-            // Check if order has the new structure
-            if (order.order_id) {
-                return `
-                    <div class="list-item">
-                        <div class="list-item-content">
-                            <h3>${order.product}</h3>
-                            <div class="list-item-meta">
-                                ORDER ID: ${order.order_id} | BATCH: ${order.batch} | QTY: ${order.requested_qty} | CREATED: ${order.created_at}
-                            </div>
-                        </div>
-                        <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
-                    </div>
-                `;
-            } else {
-                // Old structure fallback
-                return `
-                    <div class="list-item">
-                        <div class="list-item-content">
-                            <h3>${order.name || order.product}</h3>
-                            <div class="list-item-meta">
-                                BATCH: ${order.batch} | QTY: ${order.quantity || order.requested_qty} | STOCK: ${order.current_stock || 'N/A'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        }).join('');
+        container.innerHTML = orders.map(order => `
+            <div class="list-item">
+                <div>
+                    <h4>${order.product}</h4>
+                    <p class="list-meta">Order ID: ${order.order_id} | Batch: ${order.batch} | Qty: ${order.requested_qty}</p>
+                </div>
+                <span class="badge badge-${order.status.toLowerCase()}">${order.status}</span>
+            </div>
+        `).join('');
     } catch (error) {
         showToast('Failed to load orders', 'error');
     }
@@ -330,9 +491,9 @@ async function confirmOrder(orderId) {
             throw new Error(error.detail || 'Failed to confirm order');
         }
         
-        showToast('Order confirmed successfully');
-        loadDraftOrders();
-        loadOrders();
+        showToast('Order confirmed successfully', 'success');
+        await loadDraftOrders();
+        await loadOrders();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -345,32 +506,30 @@ document.getElementById('refresh-orders').addEventListener('click', () => {
 });
 
 // ========== EDIT ORDER ==========
+const editOrderModal = document.getElementById('edit-order-modal');
+const closeEditOrder = document.getElementById('close-edit-order');
+const cancelEditOrder = document.getElementById('cancel-edit-order');
+const editOrderForm = document.getElementById('edit-order-form');
 
-// Open edit order modal
 function openEditOrderModal(orderId, product, batch, quantity) {
     document.getElementById('edit-order-id').value = orderId;
     document.getElementById('edit-order-product').value = product;
     document.getElementById('edit-order-batch').value = batch;
     document.getElementById('edit-order-quantity').value = quantity;
-    document.getElementById('edit-order-modal').classList.remove('hidden');
+    editOrderModal.classList.add('show');
 }
 
-// Close edit order modal
-document.getElementById('cancel-edit-order').addEventListener('click', () => {
-    document.getElementById('edit-order-modal').classList.add('hidden');
-    document.getElementById('edit-order-form').reset();
+closeEditOrder.addEventListener('click', () => {
+    editOrderModal.classList.remove('show');
+    editOrderForm.reset();
 });
 
-// Close modal on backdrop click
-document.getElementById('edit-order-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'edit-order-modal') {
-        document.getElementById('edit-order-modal').classList.add('hidden');
-        document.getElementById('edit-order-form').reset();
-    }
+cancelEditOrder.addEventListener('click', () => {
+    editOrderModal.classList.remove('show');
+    editOrderForm.reset();
 });
 
-// Update order
-document.getElementById('edit-order-form').addEventListener('submit', async (e) => {
+editOrderForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const orderId = document.getElementById('edit-order-id').value;
@@ -389,19 +548,18 @@ document.getElementById('edit-order-form').addEventListener('submit', async (e) 
             throw new Error(error.detail || 'Failed to update order');
         }
         
-        showToast('Order updated successfully');
-        document.getElementById('edit-order-modal').classList.add('hidden');
-        document.getElementById('edit-order-form').reset();
-        loadDraftOrders();
-        loadOrders();
+        showToast('Order updated successfully', 'success');
+        editOrderModal.classList.remove('show');
+        editOrderForm.reset();
+        
+        await loadDraftOrders();
+        await loadOrders();
     } catch (error) {
         showToast(error.message, 'error');
     }
 });
 
 // ========== EXPIRY ==========
-
-// Load expiry status
 async function loadExpiry() {
     try {
         const response = await fetch(`${API}/products/expiry`, {
@@ -409,25 +567,22 @@ async function loadExpiry() {
         });
         
         if (handleAuthError(response)) return;
-        
         const items = await response.json();
         
         const container = document.getElementById('expiry-list');
         
         if (items.length === 0) {
-            container.innerHTML = '<div class="empty-state">NO PRODUCTS FOUND</div>';
+            container.innerHTML = '<p class="empty">No products found</p>';
             return;
         }
         
         container.innerHTML = items.map(item => `
             <div class="list-item">
-                <div class="list-item-content">
-                    <h3>${item.name}</h3>
-                    <div class="list-item-meta">
-                        BATCH: ${item.batch} | DAYS LEFT: ${item.days_left}
-                    </div>
+                <div>
+                    <h4>${item.name}</h4>
+                    <p class="list-meta">Batch: ${item.batch} | Days Left: ${item.days_left}</p>
                 </div>
-                <span class="badge badge-${item.status.toLowerCase()}">${item.status.toUpperCase()}</span>
+                <span class="badge badge-${item.status.toLowerCase()}">${item.status}</span>
             </div>
         `).join('');
     } catch (error) {
@@ -438,68 +593,5 @@ async function loadExpiry() {
 // Refresh expiry
 document.getElementById('refresh-expiry').addEventListener('click', loadExpiry);
 
-// ========== RECEIVE STOCK ==========
-
-// Open receive modal
-function openReceiveModal(batch, name) {
-    document.getElementById('receive-batch').value = batch;
-    document.getElementById('receive-product-name').value = name;
-    document.getElementById('receive-quantity').value = '';
-    document.getElementById('receive-modal').classList.remove('hidden');
-}
-
-// Close receive modal
-document.getElementById('cancel-receive').addEventListener('click', () => {
-    document.getElementById('receive-modal').classList.add('hidden');
-    document.getElementById('receive-form').reset();
-});
-
-// Close modal on backdrop click
-document.getElementById('receive-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'receive-modal') {
-        document.getElementById('receive-modal').classList.add('hidden');
-        document.getElementById('receive-form').reset();
-    }
-});
-
-// Receive stock
-document.getElementById('receive-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const batch = document.getElementById('receive-batch').value;
-    const quantity = parseInt(document.getElementById('receive-quantity').value);
-    
-    try {
-        const response = await fetch(`${API}/supplier/recieve?batch=${batch}&received_quantity=${quantity}`, {
-            method: 'POST',
-            headers: getAuthHeaders()
-        });
-        
-        if (handleAuthError(response)) return;
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to receive stock');
-        }
-        
-        const result = await response.json();
-        showToast(`Stock updated: ${result.received} received, new stock: ${result.current_stock}`);
-        document.getElementById('receive-modal').classList.add('hidden');
-        document.getElementById('receive-form').reset();
-
-        // Refresh all data
-        await loadProducts();
-        await loadDraftOrders();
-        await loadExpiry();
-        
-        // Refresh draft orders as auto-create might have triggered
-        loadDraftOrders();
-    } catch (error) {
-        showToast(error.message, 'error');
-    }
-});
-
 // ========== INITIALIZE ==========
-
-// Load products on page load
-loadProducts();
+// Don't load anything automatically - only load when user clicks
