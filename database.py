@@ -21,9 +21,6 @@ def init_db():
     """Initialize database tables."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Droping existing tables (This will delete all data!)
-    cursor.execute('DROP TABLE IF EXISTS orders')
-    cursor.execute('DROP TABLE IF EXISTS products')
 
     # Create products table with user_id 
     cursor.execute('''
